@@ -4,6 +4,7 @@
 
 ApplyTrack helps job seekers keep every application in one place: which company, which position, current stage (applied → test → interview → offer), deadlines, and notes. It started from a real problem: tracking many internship applications across email, job portals, and spreadsheets.
 
+[![CI](https://github.com/Bram-02/applytrack/actions/workflows/ci.yml/badge.svg)](https://github.com/Bram-02/applytrack/actions/workflows/ci.yml)
 ![status](https://img.shields.io/badge/status-in%20development-orange)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 
@@ -11,10 +12,10 @@ ApplyTrack helps job seekers keep every application in one place: which company,
 
 **Available now**
 - REST API with Express 5 + TypeScript
-- Health-check endpoint for monitoring and container orchestration
-- PostgreSQL schema (Prisma ORM) for users and applications
-- Local database with Docker Compose
-- Automated tests (Vitest + Supertest) and GitHub Actions CI
+- Liveness and readiness endpoints for monitoring and container orchestration
+- PostgreSQL schema (Prisma ORM): users, applications, status history
+- Docker Compose for PostgreSQL + API, multi-stage non-root Docker image
+- Automated tests (Vitest + Supertest) and GitHub Actions CI (test + image build)
 
 **Planned** — see [docs/ROADMAP.md](docs/ROADMAP.md)
 - JWT authentication (register / login)
@@ -41,12 +42,15 @@ applytrack/
 │   └── api/                # REST API (Express + TypeScript)
 │       ├── prisma/         # Database schema & migrations
 │       ├── src/
+│       │   ├── lib/        # Prisma client
 │       │   ├── middleware/ # Error handling, 404
 │       │   ├── routes/     # Route modules
+│       │   ├── utils/      # HttpError
 │       │   ├── app.ts      # Express app (no listen, testable)
-│       │   ├── config.ts   # Environment config
-│       │   └── server.ts   # Entry point
-│       └── tests/
+│       │   ├── config.ts   # Environment config (Zod)
+│       │   └── server.ts   # Entry point, graceful shutdown
+│       ├── tests/          # Vitest + Supertest
+│       └── Dockerfile
 ├── docs/
 ├── docker-compose.yml
 └── .github/workflows/      # CI pipeline
@@ -82,6 +86,13 @@ Check that it works:
 curl http://localhost:4000/api/health
 ```
 
+### Run everything with Docker
+
+```bash
+docker compose up --build
+curl http://localhost:4000/api/health/ready
+```
+
 ### Run tests
 
 ```bash
@@ -93,7 +104,8 @@ npm test
 
 | Method | Endpoint | Description |
 |---|---|---|
-| GET | `/api/health` | Service health status |
+| GET | `/api/health` | Liveness: the API process is up |
+| GET | `/api/health/ready` | Readiness: the database is reachable (503 if not) |
 
 ## Author
 

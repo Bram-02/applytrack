@@ -17,5 +17,20 @@ services:
       timeout: 3s
       retries: 10
 
+  api:
+    build: ./apps/api
+    container_name: applytrack-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://applytrack:applytrack@db:5432/applytrack?schema=public
+      CORS_ORIGIN: http://localhost:5173
+    ports:
+      - "4000:4000"
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   db-data:
