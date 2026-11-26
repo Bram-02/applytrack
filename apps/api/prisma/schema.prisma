@@ -1,0 +1,89 @@
+// ApplyTrack database schema
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Pipeline stages, in the order they appear on the Kanban board.
+enum ApplicationStatus {
+  WISHLIST
+  APPLIED
+  ASSESSMENT
+  INTERVIEW
+  OFFER
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum WorkMode {
+  ONSITE
+  HYBRID
+  REMOTE
+}
+
+enum EmploymentType {
+  INTERNSHIP
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  applications Application[]
+
+  @@map("users")
+}
+
+model Application {
+  id             String            @id @default(cuid())
+  userId         String            @map("user_id")
+  company        String
+  position       String
+  location       String?
+  workMode       WorkMode          @default(ONSITE) @map("work_mode")
+  employmentType EmploymentType    @default(INTERNSHIP) @map("employment_type")
+  status         ApplicationStatus @default(APPLIED)
+  /// Where the job was found: LinkedIn, Kalibrr, company site, referral, ...
+  source         String?
+  jobUrl         String?           @map("job_url")
+  appliedAt      DateTime?         @map("applied_at")
+  deadline       DateTime?
+  notes          String?
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  statusHistory StatusChange[]
+
+  @@index([userId, status])
+  @@index([userId, deadline])
+  @@map("applications")
+}
+
+/// One row per stage change, used for the application timeline.
+model StatusChange {
+  id            String             @id @default(cuid())
+  applicationId String             @map("application_id")
+  fromStatus    ApplicationStatus? @map("from_status")
+  toStatus      ApplicationStatus  @map("to_status")
+  changedAt     DateTime           @default(now()) @map("changed_at")
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, changedAt])
+  @@map("status_changes")
+}
